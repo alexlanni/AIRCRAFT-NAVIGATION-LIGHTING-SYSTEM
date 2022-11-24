@@ -1,6 +1,6 @@
-# Aircraft Navigation Lighting System
+# :airplane: Aircraft Navigation Lighting System
 
-An Arduino-based light navigation system for RC aircrafts.
+An Arduino-based light navigation system for RC aircrafts. :airplane:	
 
 ## Initial version
 
