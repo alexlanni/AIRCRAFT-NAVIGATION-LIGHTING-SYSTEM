@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <arduino-timer.h>
+#include <Sequencer.h>
 
 const int beaconLight = 12;
 const int strobeLightSX = 11;
@@ -9,22 +10,19 @@ const int positionDX = 8;
 const int landingFront = 7;
 const int buildInLED = 13;
 
-const int phaseLanding = 1;
-const int phaseNavigation = 2;
-const int phaseIdle = 3;
 volatile int activePhase = 1;
 
 const int rxInput = 3;
 
-const int navigation = 2013;
-const int landing = 1000;
-const int idle = 1501;
+const int pulseNavigation = 2013;
+const int pulseLanding = 1000;
+const int pulseIdle = 1501;
 
 auto timer = timer_create_default();
 
-int sequenceLength = 20;
-int navigationSequence[] = {0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0};
 int seqPosition = 0;
+
+Sequencer mySeq = Sequencer(0,beaconLight,strobeLightSX,strobeLightDX,positionSX,positionDX,landingFront,buildInLED);
 
 void pulseGet()
 {
@@ -32,53 +30,37 @@ void pulseGet()
   
   Serial.println(ch);
 
-  if( ch <= landing) {
-    activePhase = phaseLanding;
-  } else if( ch > landing && ch <= idle ) {
-    activePhase = phaseIdle;
-  } else if( ch > idle && ch <= navigation ) {
-    activePhase = phaseNavigation;
+  if( ch <= pulseLanding) {
+    activePhase = Sequencer::phaseLanding;
+  } else if( ch > pulseLanding && ch <= pulseIdle ) {
+    activePhase = Sequencer::phaseIdle;
+  } else if( ch > pulseIdle && ch <= pulseNavigation ) {
+    activePhase = Sequencer::phaseNavigation;
   }
+
+  mySeq = Sequencer(activePhase,beaconLight,strobeLightSX,strobeLightDX,positionSX,positionDX,landingFront,buildInLED);
+
 }
 
-bool seekSequence(void *argument)
+bool localSeek(void *arguments)
 {
-  auto activeSeq = navigationSequence;
-
-  digitalWrite(buildInLED, (activeSeq[seqPosition] == 1)?HIGH:LOW);
-
-  if(seqPosition < sequenceLength)
-  {
-    seqPosition ++;
-  } else {
-    seqPosition = 0;
-  }
-
+  int test = mySeq.seek();
+  Serial.println(test);
   return true;
 }
 
 void setup() {
-
-  pinMode(beaconLight, OUTPUT);
-  pinMode(strobeLightSX, OUTPUT);
-  pinMode(strobeLightDX, OUTPUT);
-  pinMode(positionSX, OUTPUT);
-  pinMode(positionDX, OUTPUT);
-  pinMode(landingFront, OUTPUT);
-  pinMode(buildInLED, OUTPUT);
-
-
   pinMode(rxInput, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(rxInput), pulseGet, CHANGE);
 
-  timer.every(100, seekSequence);
+  //Seek the Sequencer
+  timer.every(100, localSeek);
 
   Serial.begin(115200);
 }
 
 
 void loop() {
-
   timer.tick();
   //Scan delay
   //delay(500);
